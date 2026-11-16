@@ -1,17 +1,17 @@
 {
   "format": 1,
   "restore": {
-    "c:\\Users\\Адмін\\OOP-Maneliuk\\Lab12\\lab12v15\\lab12v15.csproj": {}
+    "C:\\Users\\Адмін\\OOP-Maneliuk\\Lab12\\lab12v15\\lab12v15.csproj": {}
   },
   "projects": {
-    "c:\\Users\\Адмін\\OOP-Maneliuk\\Lab12\\lab12v15\\lab12v15.csproj": {
+    "C:\\Users\\Адмін\\OOP-Maneliuk\\Lab12\\lab12v15\\lab12v15.csproj": {
       "version": "1.0.0",
       "restore": {
-        "projectUniqueName": "c:\\Users\\Адмін\\OOP-Maneliuk\\Lab12\\lab12v15\\lab12v15.csproj",
+        "projectUniqueName": "C:\\Users\\Адмін\\OOP-Maneliuk\\Lab12\\lab12v15\\lab12v15.csproj",
         "projectName": "lab12v15",
-        "projectPath": "c:\\Users\\Адмін\\OOP-Maneliuk\\Lab12\\lab12v15\\lab12v15.csproj",
+        "projectPath": "C:\\Users\\Адмін\\OOP-Maneliuk\\Lab12\\lab12v15\\lab12v15.csproj",
         "packagesPath": "C:\\Users\\Адмін\\.nuget\\packages\\",
-        "outputPath": "c:\\Users\\Адмін\\OOP-Maneliuk\\Lab12\\lab12v15\\obj\\",
+        "outputPath": "C:\\Users\\Адмін\\OOP-Maneliuk\\Lab12\\lab12v15\\obj\\",
         "projectStyle": "PackageReference",
         "configFilePaths": [
           "C:\\Users\\Адмін\\AppData\\Roaming\\NuGet\\NuGet.Config",

@@ -5,74 +5,36 @@ using System.Threading;
 
 namespace lab12v15
 {
-    // --- 1. Клас для роботи з файлами (Варіант 15) ---
-    public class FileProcessor
-    {
-        private int _loadAttempts = 0;
-
-        public string LoadConfiguration(string path)
-        {
-            _loadAttempts++;
-            // Імітувати IOException перші 2 рази, потім успіх
-            if (_loadAttempts <= 2)
-            {
-                throw new IOException($"Помилка читання файлу '{path}' (Спроба {_loadAttempts}).");
-            }
-            return "{ \"LocalConfig\": \"Loaded Successfully\" }";
-        }
-    }
-
-    // --- 2. Клас для роботи з мережею (Варіант 15) ---
-    public class NetworkClient
-    {
-        private int _downloadAttempts = 0;
-
-        public string DownloadConfiguration(string url)
-        {
-            _downloadAttempts++;
-            // Імітувати HttpRequestException перші 3 рази, потім успіх
-            if (_downloadAttempts <= 3)
-            {
-                throw new HttpRequestException($"Помилка підключення до '{url}' (Спроба {_downloadAttempts}).");
-            }
-            return "{ \"RemoteConfig\": \"Downloaded Successfully\" }";
-        }
-    }
-
-    // --- 3. Допоміжний клас RetryHelper ---
+    // Клас з методом для повторення операцій (Retry Pattern)
     public static class RetryHelper
     {
         public static T ExecuteWithRetry<T>(
-            Func<T> operation, 
-            int retryCount = 3, 
-            TimeSpan initialDelay = default, 
-            Func<Exception, bool>? shouldRetry = null)
+            Func<T> operation,
+            int retryCount,
+            TimeSpan initialDelay,
+            Func<Exception, bool> shouldRetry)
         {
-            int currentAttempt = 0;
-            
+            int attempt = 0;
+            TimeSpan delay = initialDelay;
+
             while (true)
             {
                 try
                 {
+                    attempt++;
                     return operation();
                 }
                 catch (Exception ex)
                 {
-                    currentAttempt++;
-                    
-                    // Перевіряємо, чи вичерпано ліміт спроб, або чи підходить виняток під умову
-                    if (currentAttempt > retryCount || (shouldRetry != null && !shouldRetry(ex)))
+                    // Якщо вичерпано спроби АБО помилка не підпадає під умову повторення - прокидаємо виняток далі
+                    if (attempt > retryCount || !shouldRetry(ex))
                     {
-                        Console.WriteLine($"[CRITICAL] Операцію скасовано після {currentAttempt - 1} повторних спроб або через непередбачений виняток.");
-                        throw;
+                        throw; 
                     }
 
-                    // Експоненційна затримка: initialDelay * 2^(currentAttempt - 1)
-                    double delayMultiplier = Math.Pow(2, currentAttempt - 1);
-                    TimeSpan delay = TimeSpan.FromMilliseconds(initialDelay.TotalMilliseconds * delayMultiplier);
-                    
-                    Console.WriteLine($"[Спроба {currentAttempt}/{retryCount}] Невдача: {ex.GetType().Name}. Повторення через {delay.TotalMilliseconds} мс...");
+                    Console.WriteLine($"[Спроба {attempt}/{retryCount}] Сталася помилка: {ex.GetType().Name}. Повторна спроба через {delay.TotalMilliseconds} мс...");
                     Thread.Sleep(delay);
+                    delay = delay * 2; // Експоненційне збільшення затримки
                 }
             }
         }
@@ -84,45 +46,71 @@ namespace lab12v15
         {
             Console.OutputEncoding = System.Text.Encoding.UTF8;
             
-            var fileProcessor = new FileProcessor();
-            var networkClient = new NetworkClient();
-
-            // Умова: Повторювати для IOException та HttpRequestException
+            // Політика: повторювати тільки для помилок вводу-виводу (IOException) або мережевих помилок (HttpRequestException)
             Func<Exception, bool> retryPolicy = ex => ex is IOException || ex is HttpRequestException;
 
-            // --- Сценарій 1: Читання конфігурації з файлу ---
-            Console.WriteLine("=== 1. Завантаження локальної конфігурації ===");
+            Console.WriteLine("=== 1. Успішне виконання після кількох тимчасових помилок ===");
+            int counter1 = 0;
             try
             {
-                string localConfig = RetryHelper.ExecuteWithRetry(
-                    operation: () => fileProcessor.LoadConfiguration("config.json"),
+                var result1 = RetryHelper.ExecuteWithRetry(
+                    operation: () =>
+                    {
+                        counter1++;
+                        if (counter1 < 3)
+                        {
+                            throw new IOException("Імітація тимчасової помилки доступу до файлу.");
+                        }
+                        return "Файл успішно прочитано!";
+                    },
                     retryCount: 3,
                     initialDelay: TimeSpan.FromMilliseconds(500),
                     shouldRetry: retryPolicy
                 );
-                Console.WriteLine($"[УСПІХ] Результат: {localConfig}\n");
+                Console.WriteLine($"Результат: {result1}\n");
             }
             catch (Exception ex)
             {
-                Console.WriteLine($"[ПОМИЛКА] {ex.Message}\n");
+                Console.WriteLine($"Кінцева помилка: {ex.Message}\n");
             }
 
-            // --- Сценарій 2: Завантаження конфігурації з мережі ---
-            Console.WriteLine("=== 2. Завантаження віддаленої конфігурації ===");
+            Console.WriteLine("=== 2. Перевищення ліміту спроб (всі спроби невдалі) ===");
             try
             {
-                // Ставимо 4 спроби, оскільки за умовою метод падає 3 рази
-                string remoteConfig = RetryHelper.ExecuteWithRetry(
-                    operation: () => networkClient.DownloadConfiguration("https://api.example.com/config"),
-                    retryCount: 4, 
-                    initialDelay: TimeSpan.FromMilliseconds(300),
+                RetryHelper.ExecuteWithRetry<bool>(
+                    operation: () =>
+                    {
+                        throw new HttpRequestException("Імітація відсутності з'єднання з сервером.");
+                    },
+                    retryCount: 2,
+                    initialDelay: TimeSpan.FromMilliseconds(500),
                     shouldRetry: retryPolicy
                 );
-                Console.WriteLine($"[УСПІХ] Результат: {remoteConfig}\n");
             }
             catch (Exception ex)
             {
-                Console.WriteLine($"[ПОМИЛКА] {ex.Message}\n");
+                Console.WriteLine($"[ПЕРЕХОПЛЕНО] Операція скасована після всіх спроб. Остання помилка: {ex.Message}\n");
+            }
+
+            // ТОЙ САМИЙ ДОДАНИЙ СЦЕНАРІЙ ДЛЯ ВИКЛАДАЧА:
+            Console.WriteLine("=== 3. Демонстрація критичної помилки (БЕЗ ПОВТОРЕНЬ) ===");
+            try
+            {
+                RetryHelper.ExecuteWithRetry<bool>(
+                    operation: () => 
+                    {
+                        // ArgumentException НЕ входить до retryPolicy, тому програма впаде одразу без повторень
+                        throw new ArgumentException("Невірні вхідні дані! (Цю помилку не треба повторювати)");
+                    },
+                    retryCount: 3,
+                    initialDelay: TimeSpan.FromMilliseconds(500),
+                    shouldRetry: retryPolicy
+                );
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"[ПЕРЕХОПЛЕНО КРИТИЧНУ ПОМИЛКУ] {ex.GetType().Name}: {ex.Message}");
+                Console.WriteLine("-> Операцію скасовано ОДРАЗУ без повторних спроб, оскільки тип помилки не дозволено в shouldRetry.\n");
             }
         }
     }
